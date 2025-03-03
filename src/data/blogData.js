@@ -5,7 +5,7 @@ const initialBlogs = [
     content:
       "React is a popular JavaScript library for building user interfaces. Developed by Facebook, React has gained widespread adoption in the web development community due to its efficiency and flexibility.\n\nOne of the key features of React is its component-based architecture. Components are reusable pieces of code that return React elements describing what should appear on the screen. They can be composed together to build complex UIs from small, isolated pieces of code.\n\nReact also introduces the concept of a virtual DOM, which is a lightweight representation of the real DOM. When the state of your application changes, React updates the virtual DOM first and then efficiently updates the real DOM to match it. This approach minimizes expensive DOM operations and improves performance.",
     author: "Jane Doe",
-    date: "2025-03-01",
+    date: "2025-03-11",
     thumbnail: "/placeholder.svg?height=200&width=300",
   },
   {
