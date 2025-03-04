@@ -1,8 +1,10 @@
 import { Link, useNavigate } from "react-router-dom"
-import { Plus } from "react-feather"
+import { Plus, LogIn, UserPlus, LogOut } from "react-feather"
+import { useAuth } from '../context/AuthContext';
 
 function Header() {
-  const navigate = useNavigate()
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <header className="header">
@@ -18,12 +20,44 @@ function Header() {
                 Home
               </Link>
             </li>
-            <li>
-              <Link to="/create" className="nav-link create-link">
-                <Plus size={20} />
-                Create Blog
-              </Link>
-            </li>
+            {user ? (
+              <>
+                <li>
+                  <Link to="/create" className="nav-link create-link">
+                    <Plus size={20} />
+                    Create Blog
+                  </Link>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => {
+                      logout();
+                      navigate('/');
+                    }} 
+                    className="nav-link"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                  >
+                    <LogOut size={20} /> Logout
+                  </button>
+                </li>
+                <li>
+                  <span className="nav-link">Welcome, {user.username}</span>
+                </li>
+              </>
+            ) : (
+              <>
+                <li>
+                  <Link to="/signin" className="nav-link">
+                    <LogIn size={20} /> Sign In
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/signup" className="nav-link">
+                    <UserPlus size={20} /> Sign Up
+                  </Link>
+                </li>
+              </>
+            )}
           </ul>
         </nav>
       </div>
@@ -32,4 +66,3 @@ function Header() {
 }
 
 export default Header
-
