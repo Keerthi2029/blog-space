@@ -7,7 +7,7 @@ import { AuthContext } from "../contexts/AuthContext"
 import axios from "axios"
 import "./BlogDetail.css"
 
-const API_URL = "http://localhost:5000/api"
+const API_URL = "https://blog-backend-3oh0.onrender.com/api"
 
 const BlogDetail = () => {
   const { id } = useParams()

@@ -6,7 +6,7 @@ import { AuthContext } from "./AuthContext"
 
 export const BlogContext = createContext()
 
-const API_URL = "http://localhost:5000/api"
+const API_URL = "https://blog-backend-3oh0.onrender.com/api"
 
 export const BlogProvider = ({ children }) => {
   const [blogs, setBlogs] = useState([])
