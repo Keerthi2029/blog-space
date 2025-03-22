@@ -4,7 +4,10 @@ import { useState, useEffect, useContext } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { BlogContext } from "../contexts/BlogContext"
 import { AuthContext } from "../contexts/AuthContext"
+import axios from "axios"
 import "./BlogForm.css"
+
+const API_URL = "http://localhost:5000/api"
 
 const EditBlog = () => {
   const { id } = useParams()
@@ -23,25 +26,47 @@ const EditBlog = () => {
       return
     }
 
-    // Load blog data
-    const blog = getBlog(id)
-    if (!blog) {
-      navigate("/")
-      return
+    const fetchBlog = async () => {
+      // First try to get the blog from context
+      const blog = getBlog(id)
+
+      if (blog) {
+        // Check if current user is the author
+        if (blog.authorId.toString() !== currentUser.id) {
+          navigate("/")
+          return
+        }
+
+        setTitle(blog.title)
+        setContent(blog.content)
+        setLoading(false)
+        return
+      }
+
+      // If not found in context, fetch from API
+      try {
+        const { data } = await axios.get(`${API_URL}/blogs/${id}`)
+
+        // Check if current user is the author
+        if (data.authorId.toString() !== currentUser.id) {
+          navigate("/")
+          return
+        }
+
+        setTitle(data.title)
+        setContent(data.content)
+      } catch (error) {
+        console.error("Error fetching blog:", error)
+        navigate("/")
+      } finally {
+        setLoading(false)
+      }
     }
 
-    // Check if current user is the author
-    if (blog.authorId !== currentUser.id) {
-      navigate("/")
-      return
-    }
-
-    setTitle(blog.title)
-    setContent(blog.content)
-    setLoading(false)
+    fetchBlog()
   }, [id, getBlog, currentUser, navigate])
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError("")
 
@@ -52,7 +77,7 @@ const EditBlog = () => {
     }
 
     try {
-      updateBlog(id, { title, content })
+      await updateBlog(id, { title, content })
       navigate(`/blog/${id}`)
     } catch (err) {
       setError(err.message)

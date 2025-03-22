@@ -21,7 +21,7 @@ const CreateBlog = () => {
     }
   }, [currentUser, navigate])
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError("")
 
@@ -32,8 +32,8 @@ const CreateBlog = () => {
     }
 
     try {
-      const newBlog = createBlog(title, content)
-      navigate(`/blog/${newBlog.id}`)
+      const newBlog = await createBlog(title, content)
+      navigate(`/blog/${newBlog._id}`)
     } catch (err) {
       setError(err.message)
     }

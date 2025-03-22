@@ -4,7 +4,10 @@ import { useContext, useEffect, useState } from "react"
 import { useParams, useNavigate, Link } from "react-router-dom"
 import { BlogContext } from "../contexts/BlogContext"
 import { AuthContext } from "../contexts/AuthContext"
+import axios from "axios"
 import "./BlogDetail.css"
+
+const API_URL = "http://localhost:5000/api"
 
 const BlogDetail = () => {
   const { id } = useParams()
@@ -15,43 +18,34 @@ const BlogDetail = () => {
   const navigate = useNavigate()
 
   useEffect(() => {
-    // First try to get the blog from context
-    const blogData = getBlog(id)
+    const fetchBlog = async () => {
+      // First try to get the blog from context
+      const blogData = getBlog(id)
 
-    if (blogData) {
-      setBlog(blogData)
-      setLoading(false)
-      return
-    }
-
-    // If not found in context, try to get from localStorage directly
-    try {
-      const storedBlogs = localStorage.getItem("blogs")
-      if (storedBlogs) {
-        const parsedBlogs = JSON.parse(storedBlogs)
-        const foundBlog = parsedBlogs.find((b) => b.id === id)
-
-        if (foundBlog) {
-          setBlog(foundBlog)
-        } else {
-          // Blog not found, redirect to home
-          navigate("/")
-        }
-      } else {
-        // No blogs in localStorage, redirect to home
-        navigate("/")
+      if (blogData) {
+        setBlog(blogData)
+        setLoading(false)
+        return
       }
-    } catch (error) {
-      console.error("Error loading blog from localStorage:", error)
-      navigate("/")
-    } finally {
-      setLoading(false)
+
+      // If not found in context, fetch from API
+      try {
+        const { data } = await axios.get(`${API_URL}/blogs/${id}`)
+        setBlog(data)
+      } catch (error) {
+        console.error("Error fetching blog:", error)
+        navigate("/")
+      } finally {
+        setLoading(false)
+      }
     }
+
+    fetchBlog()
   }, [id, getBlog, navigate])
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     try {
-      deleteBlog(id)
+      await deleteBlog(id)
       navigate("/")
     } catch (err) {
       console.error(err.message)
@@ -71,7 +65,8 @@ const BlogDetail = () => {
     return <div className="loading">Blog not found</div>
   }
 
-  const isAuthor = currentUser && currentUser.id === blog.authorId
+  // Check if user is author using MongoDB _id
+  const isAuthor = currentUser && currentUser.id === blog.authorId.toString()
 
   return (
     <div className="blog-detail-container">
@@ -96,7 +91,7 @@ const BlogDetail = () => {
         <footer className="blog-detail-footer">
           {isAuthor && (
             <div className="blog-detail-actions">
-              <Link to={`/edit/${blog.id}`} className="blog-detail-edit">
+              <Link to={`/edit/${blog._id}`} className="blog-detail-edit">
                 Edit
               </Link>
               <button onClick={handleDelete} className="blog-detail-delete">

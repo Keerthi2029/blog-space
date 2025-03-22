@@ -1,151 +1,114 @@
 "use client"
 
 import { createContext, useState, useEffect, useCallback, useMemo, useContext } from "react"
+import axios from "axios"
 import { AuthContext } from "./AuthContext"
 
 export const BlogContext = createContext()
 
-// Initialize with default blogs if none exist in localStorage
-const initializeBlogs = () => {
-  const storedBlogs = localStorage.getItem("blogs")
-  if (storedBlogs) {
-    try {
-      return JSON.parse(storedBlogs)
-    } catch (error) {
-      console.error("Error parsing blogs from localStorage:", error)
-      return []
-    }
-  }
-  return []
-}
+const API_URL = "http://localhost:5000/api"
 
 export const BlogProvider = ({ children }) => {
-  // Initialize blogs state directly from localStorage
-  const [blogs, setBlogs] = useState(initializeBlogs())
+  const [blogs, setBlogs] = useState([])
   const { currentUser } = useContext(AuthContext)
   const [loading, setLoading] = useState(true)
 
-  // Load blogs from localStorage on initial render
+  // Load blogs from API on initial render
   useEffect(() => {
-    try {
-      const storedBlogs = localStorage.getItem("blogs")
-      if (storedBlogs) {
-        setBlogs(JSON.parse(storedBlogs))
+    const fetchBlogs = async () => {
+      try {
+        const { data } = await axios.get(`${API_URL}/blogs`)
+        setBlogs(data)
+      } catch (error) {
+        console.error("Error fetching blogs:", error)
+      } finally {
+        setLoading(false)
       }
-    } catch (error) {
-      console.error("Error loading blogs from localStorage:", error)
-    } finally {
-      setLoading(false)
     }
+
+    fetchBlogs()
   }, [])
 
-  // Save blogs to localStorage whenever they change
-  useEffect(() => {
-    try {
-      localStorage.setItem("blogs", JSON.stringify(blogs))
-    } catch (error) {
-      console.error("Error saving blogs to localStorage:", error)
-    }
-  }, [blogs])
-
   const createBlog = useCallback(
-    (title, content) => {
+    async (title, content) => {
       if (!currentUser) {
         throw new Error("You must be logged in to create a blog")
       }
 
-      const newBlog = {
-        id: Date.now().toString(),
-        title,
-        content,
-        author: currentUser.username,
-        authorId: currentUser.id,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
-
-      // Update state and localStorage in one operation
-      const updatedBlogs = [...blogs, newBlog]
-      setBlogs(updatedBlogs)
-
-      // Directly update localStorage as a backup
       try {
-        localStorage.setItem("blogs", JSON.stringify(updatedBlogs))
-      } catch (error) {
-        console.error("Error saving blog to localStorage:", error)
-      }
+        const { data } = await axios.post(
+          `${API_URL}/blogs`,
+          { title, content },
+          {
+            headers: {
+              Authorization: `Bearer ${currentUser.token}`,
+            },
+          },
+        )
 
-      return newBlog
+        // Update state with new blog
+        setBlogs((prevBlogs) => [...prevBlogs, data])
+        return data
+      } catch (error) {
+        throw new Error(error.response?.data?.message || "Error creating blog")
+      }
     },
-    [currentUser, blogs],
+    [currentUser],
   )
 
   const updateBlog = useCallback(
-    (id, { title, content }) => {
+    async (id, { title, content }) => {
       if (!currentUser) {
         throw new Error("You must be logged in to update a blog")
       }
 
-      const updatedBlogs = blogs.map((blog) => {
-        if (blog.id === id) {
-          // Check if current user is the author
-          if (blog.authorId !== currentUser.id) {
-            throw new Error("You can only edit your own blogs")
-          }
-          return {
-            ...blog,
-            title,
-            content,
-            updatedAt: new Date().toISOString(),
-          }
-        }
-        return blog
-      })
-
-      setBlogs(updatedBlogs)
-
-      // Directly update localStorage as a backup
       try {
-        localStorage.setItem("blogs", JSON.stringify(updatedBlogs))
+        const { data } = await axios.put(
+          `${API_URL}/blogs/${id}`,
+          { title, content },
+          {
+            headers: {
+              Authorization: `Bearer ${currentUser.token}`,
+            },
+          },
+        )
+
+        // Update state with updated blog
+        setBlogs((prevBlogs) => prevBlogs.map((blog) => (blog._id === id ? data : blog)))
+
+        return data
       } catch (error) {
-        console.error("Error updating blog in localStorage:", error)
+        throw new Error(error.response?.data?.message || "Error updating blog")
       }
     },
-    [currentUser, blogs],
+    [currentUser],
   )
 
   const deleteBlog = useCallback(
-    (id) => {
+    async (id) => {
       if (!currentUser) {
         throw new Error("You must be logged in to delete a blog")
       }
 
-      const blogToDelete = blogs.find((blog) => blog.id === id)
-
-      if (!blogToDelete) {
-        throw new Error("Blog not found")
-      }
-
-      if (blogToDelete.authorId !== currentUser.id) {
-        throw new Error("You can only delete your own blogs")
-      }
-
-      const updatedBlogs = blogs.filter((blog) => blog.id !== id)
-      setBlogs(updatedBlogs)
-
-      // Directly update localStorage as a backup
       try {
-        localStorage.setItem("blogs", JSON.stringify(updatedBlogs))
+        await axios.delete(`${API_URL}/blogs/${id}`, {
+          headers: {
+            Authorization: `Bearer ${currentUser.token}`,
+          },
+        })
+
+        // Update state by removing deleted blog
+        setBlogs((prevBlogs) => prevBlogs.filter((blog) => blog._id !== id))
       } catch (error) {
-        console.error("Error removing blog from localStorage:", error)
+        throw new Error(error.response?.data?.message || "Error deleting blog")
       }
     },
-    [currentUser, blogs],
+    [currentUser],
   )
 
   const getBlog = useCallback(
     (id) => {
-      return blogs.find((blog) => blog.id === id)
+      return blogs.find((blog) => blog._id === id)
     },
     [blogs],
   )

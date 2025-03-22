@@ -7,7 +7,8 @@ import "./BlogCard.css"
 
 const BlogCard = ({ blog, onDelete }) => {
   const { currentUser } = useContext(AuthContext)
-  const isAuthor = currentUser && currentUser.id === blog.authorId
+  // Check if user is author using MongoDB _id
+  const isAuthor = currentUser && currentUser.id === blog.authorId.toString()
 
   // Format date
   const formatDate = (dateString) => {
@@ -30,15 +31,15 @@ const BlogCard = ({ blog, onDelete }) => {
       </div>
       <p className="blog-excerpt">{truncateContent(blog.content)}</p>
       <div className="blog-actions">
-        <Link to={`/blog/${blog.id}`} className="blog-read-more">
+        <Link to={`/blog/${blog._id}`} className="blog-read-more">
           Read More
         </Link>
         {isAuthor && (
           <div className="blog-author-actions">
-            <Link to={`/edit/${blog.id}`} className="blog-edit">
+            <Link to={`/edit/${blog._id}`} className="blog-edit">
               Edit
             </Link>
-            <button onClick={() => onDelete(blog.id)} className="blog-delete">
+            <button onClick={() => onDelete(blog._id)} className="blog-delete">
               Delete
             </button>
           </div>

@@ -1,70 +1,93 @@
 "use client"
 
 import { createContext, useState, useEffect, useCallback, useMemo } from "react"
+import axios from "axios"
 
 export const AuthContext = createContext()
+
+const API_URL = "http://localhost:5000/api"
 
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  // Initialize users from localStorage or create empty array
-  const initializeUsers = useCallback(() => {
-    const users = localStorage.getItem("users")
-    return users ? JSON.parse(users) : []
-  }, [])
-
-  // Load current user from localStorage on initial render
+  // Load current user from localStorage token on initial render
   useEffect(() => {
-    const storedUser = localStorage.getItem("currentUser")
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser))
+    const loadUser = async () => {
+      const token = localStorage.getItem("token")
+
+      if (token) {
+        try {
+          // Set auth header
+          axios.defaults.headers.common["Authorization"] = `Bearer ${token}`
+
+          // Get user profile
+          const { data } = await axios.get(`${API_URL}/users/profile`)
+
+          setCurrentUser({
+            id: data._id,
+            username: data.username,
+            email: data.email,
+            token,
+          })
+        } catch (error) {
+          console.error("Error loading user:", error)
+          localStorage.removeItem("token")
+          delete axios.defaults.headers.common["Authorization"]
+        }
+      }
+
+      setLoading(false)
     }
-    setLoading(false)
+
+    loadUser()
   }, [])
 
-  const signUp = useCallback(
-    (username, email, password) => {
-      const users = initializeUsers()
+  const signUp = useCallback(async (username, email, password) => {
+    try {
+      await axios.post(`${API_URL}/users`, {
+        username,
+        email,
+        password,
+      })
 
-      // Check if user already exists
-      const userExists = users.some((user) => user.email === email || user.username === username)
-      if (userExists) {
-        throw new Error("User already exists")
+      return { success: true }
+    } catch (error) {
+      throw new Error(error.response?.data?.message || "Error creating account")
+    }
+  }, [])
+
+  const signIn = useCallback(async (email, password) => {
+    try {
+      const { data } = await axios.post(`${API_URL}/users/login`, {
+        email,
+        password,
+      })
+
+      // Save token to localStorage
+      localStorage.setItem("token", data.token)
+
+      // Set auth header
+      axios.defaults.headers.common["Authorization"] = `Bearer ${data.token}`
+
+      // Set current user
+      const userWithoutPassword = {
+        id: data._id,
+        username: data.username,
+        email: data.email,
+        token: data.token,
       }
 
-      // Create new user
-      const newUser = { id: Date.now().toString(), username, email, password }
-      const updatedUsers = [...users, newUser]
-
-      // Save to localStorage
-      localStorage.setItem("users", JSON.stringify(updatedUsers))
-      return newUser
-    },
-    [initializeUsers],
-  )
-
-  const signIn = useCallback(
-    (email, password) => {
-      const users = initializeUsers()
-
-      // Find user
-      const user = users.find((user) => user.email === email && user.password === password)
-      if (!user) {
-        throw new Error("Invalid credentials")
-      }
-
-      // Save current user to localStorage
-      const userWithoutPassword = { ...user, password: undefined }
-      localStorage.setItem("currentUser", JSON.stringify(userWithoutPassword))
       setCurrentUser(userWithoutPassword)
       return userWithoutPassword
-    },
-    [initializeUsers],
-  )
+    } catch (error) {
+      throw new Error(error.response?.data?.message || "Invalid credentials")
+    }
+  }, [])
 
   const signOut = useCallback(() => {
-    localStorage.removeItem("currentUser")
+    localStorage.removeItem("token")
+    delete axios.defaults.headers.common["Authorization"]
     setCurrentUser(null)
   }, [])
 
